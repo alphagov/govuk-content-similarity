@@ -78,9 +78,12 @@ df_small = df[['base_path', 'text', 'text_clean', 'details']].iloc[:50000].copy(
 nlp = spacy.load('en', disable=['ner', 'parser'])
 # lemmatise and remove stopwords
 t = time()
-df_small['text_clean'] = [clean_text(doc) for doc in nlp.pipe(df_small['text_clean'], batch_size=5000, n_process=-1)]
+df_small['text_clean'] = [clean_text(doc) for doc in nlp.pipe(df_small['text_clean'], batch_size=5000)]
 print('Time to clean up everything: {} minutes'.format(round((time() - t) / 60, 2)))
 del t
 
 # remove NAs and duplicates
 df_small = df_small.dropna(axis=0, subset=['text_clean']).drop_duplicates()
+
+# export so can do document embeddings and SOMs in later script
+df_small.to_csv(path_or_buf='data/df.csv', index=False)
