@@ -25,7 +25,7 @@ print('Time to train: {} minutes'.format(round((time() - t) / 60, 2)))
 
 # save trained model
 model_dbow.save('data/model_dbow')
-#model_dbow = Doc2Vec.load(file_name)
+#model_dbow = Doc2Vec.load('data/model_dbow')
 
 # store and save document vectors in numpy array for minisom
 array_doc_vectors = model_dbow.docvecs.vectors_docs
