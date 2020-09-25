@@ -1,25 +1,23 @@
 import SimpSOM as sps
 
-from math import sqrt
-
+import pickle
 import numpy as np
 import pandas as pd
 
 from sklearn.preprocessing import normalize
 
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-import seaborn as sns
-
 import plotly.offline as py
 import plotly.graph_objs as go
-import plotly.tools as tls
+import plotly.express as px
+
+from PIL import Image
+from skimage import io
+
 
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
 array_doc_vec = np.load(file='data/document_vectors.npy')
 
-labels = df_output['base_path'][:500]
+labels = df_output['base_path'][:500].tolist()
 
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
@@ -40,8 +38,57 @@ net.train(startLearnRate=0.1, epochs=5000)
 # which will help identify cluster centres
 net.diff_graph(show=True, printout=True)
 
-# save the network dimensions, PBC and node weights to file
-net.save(fileName='somNet_trained', path='././data')
+# save the som
+with open('././data/som_net_train.pkl', 'wb') as outfile:
+    pickle.dump(net, outfile)
+
+# load trained model
+with open('././data/som_net_train.pkl', 'rb') as infile:
+    net = pickle.load(infile)
 
 # project our data onto the map to see where pages are being mapped
-plot_data = net.project(normed_array_doc_vec)
+plot_data = net.project(array=normed_array_doc_vec)
+
+# get (x,y) coordinates to crop
+img = io.imread(fname='nodesDifference.png')
+fig = px.imshow(img)
+py.plot(figure_or_data=fig, filename='reports/figures/som_nodes_difference.html')
+
+# interactive plotting to see base_paths
+fig = go.Figure()
+
+fig.add_trace(
+    go.Scatter(
+        x=[x for x, y in plot_data],
+        y=[y for x, y in plot_data],
+        hovertext=[str(n) for n in labels],
+        text=[str(n) for n in labels],
+        mode='markers',
+        marker=dict(
+            size=8,
+            color='white',
+            opacity=1),
+        showlegend=False)
+)
+
+# add hex plot
+im = Image.open(fp='nodesDifference.png')
+left = 195
+top = 150
+right = 1135
+bottom = 620
+im = im.crop(box=(left, top, right, bottom))
+fig.add_layout_image(
+        dict(
+            source=im,
+            xref="x",
+            yref="y",
+            x=0,
+            y=6.5,
+            sizex=14,
+            sizey=8,
+            opacity=0.5,
+            layer="below")
+)
+
+py.plot(figure_or_data=fig, filename='reports/figures/som_nodes_difference.html')
