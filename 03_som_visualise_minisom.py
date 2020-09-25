@@ -60,6 +60,11 @@ def get_minimal_distance_factors(n):
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
 array_doc_vectors = np.load(file='data/document_vectors.npy')
 
+# may need to normalise document vectors
+# https://stats.stackexchange.com/a/218729/276516
+# https://stackoverflow.com/questions/53971240/normalize-vectors-in-gensim-model
+
+
 # compute parameters
 len_vector = array_doc_vectors.shape[1]
 # compute number of neurons and how many make up each side
@@ -83,7 +88,6 @@ y = int(round(y, 0))
 # values of x and y are too far from each other
 x, y = get_minimal_distance_factors(total_neurons)
 
-
 del total_neurons, normal_cov, eigen_values, result
 
 # initialization and training of SOM
@@ -93,11 +97,6 @@ som = MiniSom(x=x, y=y, input_len=len_vector,
 # initialise weights to map
 som.pca_weights_init(data=array_doc_vectors)
 som.train_batch(data=array_doc_vectors, num_iteration=100)
-
-# basic plot
-plt.figure(figsize=(10, 10))
-plt.pcolor(som.distance_map().T, cmap='bone_r')
-plt.show()
 
 # hexagonal plotting
 f = plt.figure(figsize=(10, 10))
@@ -137,3 +136,6 @@ cb1.ax.set_ylabel('distance from neurons in the neighbourhood',
 plt.gcf().add_axes(ax_cb)
 
 plt.show()
+
+del ax, ax_cb, cb1, cnt, divider, f, hex, i, j, umatrix, w, weights, \
+    wx, wy, x, xrange, xx, y, yrange, yy
