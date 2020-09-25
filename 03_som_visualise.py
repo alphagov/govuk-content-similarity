@@ -1,6 +1,7 @@
 from minisom import MiniSom
 
 from math import sqrt
+from math import ceil
 import numpy as np
 import pandas as pd
 
@@ -10,23 +11,48 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import cm, colorbar
 
 
+def is_prime(n):
+    """
+    Checks if a number is prime.
+    https://stackoverflow.com/a/17377939/13416265
+
+    :param n: Number to check if prime
+    :return: Boolean to state whether n is prime or not
+    """
+    if n == 2:
+        return True
+    if n % 2 == 0 or n <= 1:
+        return False
+
+    root = int(sqrt(n)) + 1
+    for divisor in range(3, root, 2):
+        if n % divisor == 0:
+            return False
+    return True
+
+
 def get_minimal_distance_factors(n):
     """
     Get the factors of a number which have the smallest difference between them.
     This is so we specify the gridsize for our SOM to be relatively balanced in height and width.
+    Note: If have prime number, naively takes nearest even number.
+            This is so we don't end up in situation where have 1xm gridsize.
+            Might be better ways to do this.
 
     :param n: Integer or float we want to extract the closest factors from.
     :return: The factors of n whose distance from each other is minimised.
     """
     try:
-        if isinstance(n, float):
-            n = int(round(n, 0))
+        n = int(n)
+        if isinstance(n, float) or is_prime(n):
+            # gets next largest even number
+            n = ceil(n/2) * 2
             return get_minimal_distance_factors(n)
         else:
             root = np.floor(sqrt(n))
             while n % root > 0:
                 root -= 1
-            return root, n/root
+            return int(root), int(n/root)
     except TypeError:
         print("Input '{}' is not a integer nor float, please enter one!".format(n))
 
