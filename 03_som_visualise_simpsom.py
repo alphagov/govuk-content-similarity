@@ -8,29 +8,10 @@ from sklearn.preprocessing import normalize
 
 import plotly.offline as py
 import plotly.graph_objs as go
+import plotly.express as px
 
-from PIL import Image, ImageChops
-
-
-def auto_crop(filename, left, right, top):
-    """
-    Crop image passed in and overlay a blank canvas
-
-    param filename: Name of image file to crop.
-    param left: The amount of image you want to keep from left-side
-    param right: The amount of image you want to keep from the right-side
-    param top: The amount of image you want to keep from the top
-    return: Cropped empty canvas for interactive plotting
-
-    """
-    im = Image.open(filename)
-    im = im.crop(box=(left, right, top, im.size[1]))
-    bg = Image.new(mode=im.mode, size=im.size, color=im.getpixel((0, 0)))
-    diff = ImageChops.difference(image1=im, image2=bg)
-    diff = ImageChops.add(image1=diff, image2=diff, scale=2.0, offset=-100)
-    bbox = diff.getbbox()
-    if bbox:
-        return im.crop(bbox)
+from PIL import Image
+from skimage import io
 
 
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
@@ -63,17 +44,17 @@ with open('././data/som_net_train.pkl', 'wb') as outfile:
 
 # load trained model
 with open('././data/som_net_train.pkl', 'rb') as infile:
-    test = pickle.load(infile)
+    net = pickle.load(infile)
 
 # project our data onto the map to see where pages are being mapped
 plot_data = net.project(array=normed_array_doc_vec)
 
-# interactive plotting to see base_paths
-img_crop = auto_crop(filename='nodesDifference.png',
-                     left=0, right=0, top=2900)
-img_crop.save('reports/figures/som_nodes_difference_crop.png')
+# get (x,y) coordinates to crop
+img = io.imread(fname='nodesDifference.png')
+fig = px.imshow(img)
+py.plot(figure_or_data=fig, filename='reports/figures/som_nodes_difference.html')
 
-# prepare plotly graph
+# interactive plotting to see base_paths
 fig = go.Figure()
 
 fig.add_trace(
@@ -90,20 +71,24 @@ fig.add_trace(
         showlegend=False)
 )
 
-# add images
+# add hex plot
 im = Image.open(fp='nodesDifference.png')
+left = 195
+top = 150
+right = 1135
+bottom = 620
+im = im.crop(box=(left, top, right, bottom))
 fig.add_layout_image(
         dict(
             source=im,
             xref="x",
             yref="y",
             x=0,
-            y=3,
-            sizex=2,
-            sizey=2,
-            sizing="stretch",
+            y=6.5,
+            sizex=14,
+            sizey=8,
             opacity=0.5,
             layer="below")
 )
 
-py.plot(figure_or_data=fig, filename='styled-scatter.html')
+py.plot(figure_or_data=fig, filename='reports/figures/som_nodes_difference.html')
