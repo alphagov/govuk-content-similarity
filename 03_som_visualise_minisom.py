@@ -5,6 +5,8 @@ from math import ceil
 import numpy as np
 import pandas as pd
 
+from sklearn.preprocessing import normalize
+
 import matplotlib.pyplot as plt
 from matplotlib.patches import RegularPolygon
 from mpl_toolkits.axes_grid1 import make_axes_locatable
@@ -58,24 +60,25 @@ def get_minimal_distance_factors(n):
 
 
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
-array_doc_vectors = np.load(file='data/document_vectors.npy')
+array_doc_vec = np.load(file='data/document_vectors.npy')
 
-# may need to normalise document vectors
+# normalise array using l2 normalisation
+# so sum of squares is 1 for each vector
 # https://stats.stackexchange.com/a/218729/276516
 # https://stackoverflow.com/questions/53971240/normalize-vectors-in-gensim-model
-
+normed_array_doc_vec = normalize(X=array_doc_vec, axis=1, norm='l2')
 
 # compute parameters
-len_vector = array_doc_vectors.shape[1]
+len_vector = normed_array_doc_vec.shape[1]
 # compute number of neurons and how many make up each side
 # where this is approximately the ratio of two largest eigenvalues of training data's covariance matrix
 # https://python-data-science.readthedocs.io/en/latest/unsupervised.html
 # rule of thumb for setting grid is 5*sqrt(N) where N is sample size
 # example must be transpose of our case:
 # https://stats.stackexchange.com/questions/282288/som-grid-size-suggested-by-vesanto
-total_neurons = 5 * sqrt(array_doc_vectors.shape[0])
+total_neurons = 5 * sqrt(normed_array_doc_vec.shape[0])
 # calculate eigenvalues
-normal_cov = np.cov(array_doc_vectors.T)
+normal_cov = np.cov(normed_array_doc_vec.T)
 eigen_values = np.linalg.eigvals(normal_cov)
 # get two largest eigenvalues
 result = sorted([i.real for i in eigen_values])[-2:]
@@ -95,8 +98,8 @@ som = MiniSom(x=x, y=y, input_len=len_vector,
               activation_distance='cosine', topology='hexagonal',
               sigma=0.3, learning_rate=0.5, random_seed=42)
 # initialise weights to map
-som.pca_weights_init(data=array_doc_vectors)
-som.train_batch(data=array_doc_vectors, num_iteration=100)
+som.pca_weights_init(data=normed_array_doc_vec)
+som.train_batch(data=normed_array_doc_vec, num_iteration=100)
 
 # hexagonal plotting
 f = plt.figure(figsize=(10, 10))
@@ -114,7 +117,7 @@ for i in range(weights.shape[0]):
                              facecolor=cm.Blues(umatrix[i, j]), alpha=.4, edgecolor='gray')
         ax.add_patch(hex)
 
-for cnt, x in enumerate(array_doc_vectors):
+for cnt, x in enumerate(normed_array_doc_vec):
     w = som.winner(x)  # getting the winner
     # place a marker on the winning position for the sample xx
     wx, wy = som.convert_map_to_euclidean(w)
