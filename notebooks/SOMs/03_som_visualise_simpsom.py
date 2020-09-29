@@ -65,8 +65,8 @@ fig.add_trace(
         text=[str(n) for n in labels],
         mode='markers',
         marker=dict(
-            size=8,
-            color='white',
+            size=14,
+            color='black',
             opacity=1),
         showlegend=False)
 )
@@ -83,7 +83,7 @@ fig.add_layout_image(
             source=im,
             xref="x",
             yref="y",
-            x=0,
+            x=-0.5,
             y=6.5,
             sizex=14,
             sizey=8,
