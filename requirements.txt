@@ -1,0 +1,7 @@
+flake8
+detect-secrets
+pre-commit
+pytest
+recommonmark
+Sphinx
+sphinx-markdown-tables
