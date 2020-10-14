@@ -8,9 +8,6 @@ import pandas as pd
 from sklearn.preprocessing import normalize
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import RegularPolygon
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib import cm, colorbar
 
 
 def is_prime(n):
@@ -48,25 +45,35 @@ def get_minimal_distance_factors(n):
         n = int(n)
         if isinstance(n, float) or is_prime(n):
             # gets next largest even number
-            n = ceil(n/2) * 2
+            n = ceil(n / 2) * 2
             return get_minimal_distance_factors(n)
         else:
             root = np.floor(sqrt(n))
             while n % root > 0:
                 root -= 1
-            return int(root), int(n/root)
+            return int(root), int(n / root)
     except TypeError:
         print("Input '{}' is not a integer nor float, please enter one!".format(n))
 
 
+# load doc2vec embedding vectors
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
 array_doc_vec = np.load(file='data/document_vectors.npy')
+
+# load USE embedding vectors
+# from: https://drive.google.com/drive/u/0/folders/1xnAiSEkQY2P6uTNgax4miZaISn6sVeu4
+df_output = pd.read_csv(filepath_or_buffer='data/text_df.csv')
+df_doc_vec = pd.read_csv(filepath_or_buffer='data/embeddings_df.csv')
+array_doc_vec = df_doc_vec.drop(columns='content_id').to_numpy()
 
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
 # https://stats.stackexchange.com/a/218729/276516
 # https://stackoverflow.com/questions/53971240/normalize-vectors-in-gensim-model
-normed_array_doc_vec = normalize(X=array_doc_vec, axis=1, norm='l2')
+normed_array_doc_vec = normalize(X=array_doc_vec, axis=0, norm='l2')
+
+# alternative normalisation
+normed_array_doc_vec = (array_doc_vec - np.mean(array_doc_vec, axis=0)) / np.std(array_doc_vec, axis=0)
 
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
@@ -82,8 +89,8 @@ normal_cov = np.cov(normed_array_doc_vec.T)
 eigen_values = np.linalg.eigvals(normal_cov)
 # get two largest eigenvalues
 result = sorted([i.real for i in eigen_values])[-2:]
-x = result[1]/result[0]
-y = total_neurons/x
+x = result[1] / result[0]
+y = total_neurons / x
 x = int(round(x, 0))
 y = int(round(y, 0))
 
@@ -95,50 +102,34 @@ del total_neurons, normal_cov, eigen_values, result
 
 # initialization and training of SOM
 som = MiniSom(x=x, y=y, input_len=len_vector,
-              activation_distance='cosine', topology='hexagonal',
-              sigma=0.3, learning_rate=0.5, random_seed=42)
-# initialise weights to map
-som.pca_weights_init(data=normed_array_doc_vec)
-som.train_batch(data=normed_array_doc_vec, num_iteration=100)
+              activation_distance='cosine', topology='rectangular', neighborhood_function='gaussian',
+              sigma=0.8, learning_rate=0.8, random_seed=42)
+som.train_batch(data=normed_array_doc_vec, num_iteration=500, verbose=True)
 
-# hexagonal plotting
-f = plt.figure(figsize=(10, 10))
-ax = f.add_subplot(111)
-ax.set_aspect('equal')
+# will consider all the sample mapped into a specific neuron as a cluster.
+# to identify each cluster more easily, will translate the bi-dimensional indices
+# of the neurons on the SOM into mono-dimensional indices.
+# each neuron represents a cluster
+winner_coordinates = np.array([som.winner(x) for x in normed_array_doc_vec]).T
+# with np.ravel_multi_index, we convert the bi-dimensional coordinates to a mono-dimensional index
+cluster_index = np.ravel_multi_index(multi_index=winner_coordinates, dims=(x, y))
 
-xx, yy = som.get_euclidean_coordinates()
-umatrix = som.distance_map()
-weights = som.get_weights()
-
-for i in range(weights.shape[0]):
-    for j in range(weights.shape[1]):
-        wy = yy[(i, j)]*2/np.sqrt(3)*3/4
-        hex = RegularPolygon((xx[(i, j)], wy), numVertices=6, radius=.95/np.sqrt(3),
-                             facecolor=cm.Blues(umatrix[i, j]), alpha=.4, edgecolor='gray')
-        ax.add_patch(hex)
-
-for cnt, x in enumerate(normed_array_doc_vec):
-    w = som.winner(x)  # getting the winner
-    # place a marker on the winning position for the sample xx
-    wx, wy = som.convert_map_to_euclidean(w)
-    wy = wy*2/np.sqrt(3)*3/4
-    plt.plot(wx, wy, markerfacecolor='None', markersize=12, markeredgewidth=2)
-
-xrange = np.arange(weights.shape[0])
-yrange = np.arange(weights.shape[1])
-plt.xticks(xrange-.5, xrange)
-plt.yticks(yrange*2/np.sqrt(3)*3/4, yrange)
-
-divider = make_axes_locatable(plt.gca())
-ax_cb = divider.new_horizontal(size="5%", pad=0.05)
-cb1 = colorbar.ColorbarBase(ax_cb, cmap=cm.Blues,
-                            orientation='vertical', alpha=.4)
-cb1.ax.get_yaxis().labelpad = 16
-cb1.ax.set_ylabel('distance from neurons in the neighbourhood',
-                  rotation=270, fontsize=16)
-plt.gcf().add_axes(ax_cb)
-
-plt.show()
-
-del ax, ax_cb, cb1, cnt, divider, f, hex, i, j, umatrix, w, weights, \
-    wx, wy, x, xrange, xx, y, yrange, yy
+# plot each luster with a different colour
+# plotting clusters using the first 2-dimensions of the data
+for cluster in np.unique(cluster_index):
+    plt.scatter(x=normed_array_doc_vec[cluster_index == cluster, 0],
+                y=normed_array_doc_vec[cluster_index == cluster, 1],
+                label='cluster = ' + str(cluster),
+                alpha=0.7)
+# plotting centroids
+for centroid in som.get_weights():
+    plt.scatter(x=centroid[:, 0],
+                y=centroid[:, 1],
+                marker='x',
+                s=80,
+                linewidths=3,
+                color='k',
+                label='centroid')
+plt.legend()
+plt.savefig(fname='reports/figures/som_cluster_scatter_use_l2.png')
+plt.close('all')
