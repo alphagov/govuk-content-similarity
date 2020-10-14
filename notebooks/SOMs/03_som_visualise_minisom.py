@@ -8,9 +8,8 @@ import pandas as pd
 from sklearn.preprocessing import normalize
 
 import matplotlib.pyplot as plt
-from matplotlib.patches import RegularPolygon
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-from matplotlib import cm, colorbar
+from bokeh.palettes import viridis
+from bokeh.plotting import figure, output_file, show
 
 
 def is_prime(n):
@@ -48,25 +47,41 @@ def get_minimal_distance_factors(n):
         n = int(n)
         if isinstance(n, float) or is_prime(n):
             # gets next largest even number
-            n = ceil(n/2) * 2
+            n = ceil(n / 2) * 2
             return get_minimal_distance_factors(n)
         else:
             root = np.floor(sqrt(n))
             while n % root > 0:
                 root -= 1
-            return int(root), int(n/root)
+            return int(root), int(n / root)
     except TypeError:
         print("Input '{}' is not a integer nor float, please enter one!".format(n))
 
 
+# load doc2vec embedding vectors
 df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
 array_doc_vec = np.load(file='data/document_vectors.npy')
+
+# load rest of df - same as 01_load_clean.py
+# PLACEHOLDER CODE
 
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
 # https://stats.stackexchange.com/a/218729/276516
 # https://stackoverflow.com/questions/53971240/normalize-vectors-in-gensim-model
-normed_array_doc_vec = normalize(X=array_doc_vec, axis=1, norm='l2')
+normed_array_doc_vec = normalize(X=array_doc_vec, axis=0, norm='l2')
+
+# bring data together
+df_output['base_path'] = 'www.gov.uk' + df_output['base_path']
+df_output['document_vectors_norm'] = normed_array_doc_vec.tolist()
+
+# focus on specific subset of data, these are:
+# - Brexit/Transition
+# - Coronavirus
+# For now, just random sample
+df_output = df_output.sample(n=50000, random_state=42)
+normed_array_doc_vec = df_output['document_vectors_norm'].tolist()
+normed_array_doc_vec = np.array(normed_array_doc_vec)
 
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
@@ -82,8 +97,8 @@ normal_cov = np.cov(normed_array_doc_vec.T)
 eigen_values = np.linalg.eigvals(normal_cov)
 # get two largest eigenvalues
 result = sorted([i.real for i in eigen_values])[-2:]
-x = result[1]/result[0]
-y = total_neurons/x
+x = result[1] / result[0]
+y = total_neurons / x
 x = int(round(x, 0))
 y = int(round(y, 0))
 
@@ -95,50 +110,63 @@ del total_neurons, normal_cov, eigen_values, result
 
 # initialization and training of SOM
 som = MiniSom(x=x, y=y, input_len=len_vector,
-              activation_distance='cosine', topology='hexagonal',
-              sigma=0.3, learning_rate=0.5, random_seed=42)
-# initialise weights to map
-som.pca_weights_init(data=normed_array_doc_vec)
-som.train_batch(data=normed_array_doc_vec, num_iteration=100)
+              activation_distance='cosine', topology='rectangular', neighborhood_function='gaussian',
+              sigma=0.8, learning_rate=0.8, random_seed=42)
+som.train_batch(data=normed_array_doc_vec, num_iteration=1000, verbose=True)
 
-# hexagonal plotting
-f = plt.figure(figsize=(10, 10))
-ax = f.add_subplot(111)
-ax.set_aspect('equal')
+# plot distance map, U-Matrix, using pseudocolour
+# where neurons of maps are displayed as an array of cells
+# and colour represents the weights/distance from neighbour neurons
+plt.figure(figsize=(9, 9))
+plt.pcolor(som.distance_map().T, cmap='bone_r')
+plt.colorbar()
 
-xx, yy = som.get_euclidean_coordinates()
-umatrix = som.distance_map()
-weights = som.get_weights()
+# will consider all the sample mapped into a specific neuron as a cluster.
+# to identify each cluster more easily, will translate the bi-dimensional indices
+# of the neurons on the SOM into mono-dimensional indices.
+# each neuron represents a cluster
+winner_coordinates = np.array([som.winner(x) for x in normed_array_doc_vec]).T
+# with np.ravel_multi_index, we convert the bi-dimensional coordinates to a mono-dimensional index
+cluster_index = np.ravel_multi_index(multi_index=winner_coordinates, dims=(x, y))
 
-for i in range(weights.shape[0]):
-    for j in range(weights.shape[1]):
-        wy = yy[(i, j)]*2/np.sqrt(3)*3/4
-        hex = RegularPolygon((xx[(i, j)], wy), numVertices=6, radius=.95/np.sqrt(3),
-                             facecolor=cm.Blues(umatrix[i, j]), alpha=.4, edgecolor='gray')
-        ax.add_patch(hex)
+# via applying SOMs,
+# have gone from mapping space X of dimensions
+len(normed_array_doc_vec)
+# to a mapping space Y of dimensions
+len(np.unique(cluster_index))
 
-for cnt, x in enumerate(normed_array_doc_vec):
-    w = som.winner(x)  # getting the winner
-    # place a marker on the winning position for the sample xx
-    wx, wy = som.convert_map_to_euclidean(w)
-    wy = wy*2/np.sqrt(3)*3/4
-    plt.plot(wx, wy, markerfacecolor='None', markersize=12, markeredgewidth=2)
+# bring cluster indices back to original data to tie them with base_path
+df_output['cluster_index'] = cluster_index
 
-xrange = np.arange(weights.shape[0])
-yrange = np.arange(weights.shape[1])
-plt.xticks(xrange-.5, xrange)
-plt.yticks(yrange*2/np.sqrt(3)*3/4, yrange)
+# plot each cluster with a different colour
+# plotting clusters using the first 2-dimensions of the data
+for cluster in np.unique(cluster_index)[10:12]:
+    plt.scatter(x=normed_array_doc_vec[cluster_index == cluster, 0],
+                y=normed_array_doc_vec[cluster_index == cluster, 1],
+                label='cluster = ' + str(cluster),
+                alpha=0.7)
+# plotting centroids found here: https://github.com/JustGlowing/minisom/blob/master/examples/Clustering.ipynb
+# exclude because it's causing noisy plot
 
-divider = make_axes_locatable(plt.gca())
-ax_cb = divider.new_horizontal(size="5%", pad=0.05)
-cb1 = colorbar.ColorbarBase(ax_cb, cmap=cm.Blues,
-                            orientation='vertical', alpha=.4)
-cb1.ax.get_yaxis().labelpad = 16
-cb1.ax.set_ylabel('distance from neurons in the neighbourhood',
-                  rotation=270, fontsize=16)
-plt.gcf().add_axes(ax_cb)
+plt.legend()
+plt.savefig(fname='reports/figures/som_cluster_scatter.png')
+plt.close('all')
 
-plt.show()
 
-del ax, ax_cb, cb1, cnt, divider, f, hex, i, j, umatrix, w, weights, \
-    wx, wy, x, xrange, xx, y, yrange, yy
+# experiment with bokeh plotting
+TOOLS = "hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,"
+
+p = figure(tools=TOOLS)
+list_cluster_index = np.unique(cluster_index).tolist()
+palette_colours = viridis(n=len(list_cluster_index))
+dict_plot = {list_cluster_index[i]: palette_colours[i] for i in range(len(list_cluster_index))}
+dict_plot = {list_cluster_index[i]: palette_colours[i] for i in range(12)}
+
+for key, value in dict_plot.items():
+    p.scatter(x=normed_array_doc_vec[cluster_index == key, 0],
+              y=normed_array_doc_vec[cluster_index == key, 1],
+              fill_color=value)
+output_file("color_scatter.html", title="SOMs visualised on two-dimensions")
+show(p)
+
+del p

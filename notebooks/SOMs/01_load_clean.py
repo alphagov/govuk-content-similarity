@@ -70,20 +70,16 @@ df = df.dropna(subset=['text'], axis=0)
 # remove non-alphabetic characters
 df['text_clean'] = [re.sub("[^A-Za-z']+", ' ', str(row)).lower() for row in df['text']]
 
-# focus on df['text'] column and a smaller subset for testing purposes
-df_small = df[['base_path', 'text', 'text_clean', 'details']].iloc[:50000].copy()
-
-
 # disable ner for speed
 nlp = spacy.load('en', disable=['ner', 'parser'])
 # lemmatise and remove stopwords
 t = time()
-df_small['text_clean'] = [clean_text(doc) for doc in nlp.pipe(df_small['text_clean'], batch_size=5000)]
+df['text_clean'] = [clean_text(doc) for doc in nlp.pipe(df['text_clean'], batch_size=5000)]
 print('Time to clean up everything: {} minutes'.format(round((time() - t) / 60, 2)))
 del t
 
 # remove NAs and duplicates
-df_small = df_small.dropna(axis=0, subset=['text_clean']).drop_duplicates()
+df = df.dropna(axis=0, subset=['text_clean']).drop_duplicates()
 
 # export so can do document embeddings and SOMs in later script
-df_small.to_csv(path_or_buf='data/df.csv', index=False)
+df[['base_path', 'text', 'text_clean']].to_csv(path_or_buf='data/df.csv', index=False)
