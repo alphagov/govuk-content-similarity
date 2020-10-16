@@ -62,9 +62,9 @@ array_doc_vec = np.load(file='data/document_vectors.npy')
 
 # load USE embedding vectors
 # from: https://drive.google.com/drive/u/0/folders/1xnAiSEkQY2P6uTNgax4miZaISn6sVeu4
-df_output = pd.read_csv(filepath_or_buffer='data/text_df.csv')
-df_doc_vec = pd.read_csv(filepath_or_buffer='data/embeddings_df.csv')
-array_doc_vec = df_doc_vec.drop(columns='content_id').to_numpy()
+#df_output = pd.read_csv(filepath_or_buffer='data/text_df.csv')
+#df_doc_vec = pd.read_csv(filepath_or_buffer='data/embeddings_df.csv')
+#array_doc_vec = df_doc_vec.drop(columns='content_id').to_numpy()
 
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
@@ -72,8 +72,8 @@ array_doc_vec = df_doc_vec.drop(columns='content_id').to_numpy()
 # https://stackoverflow.com/questions/53971240/normalize-vectors-in-gensim-model
 normed_array_doc_vec = normalize(X=array_doc_vec, axis=0, norm='l2')
 
-# alternative normalisation
-normed_array_doc_vec = (array_doc_vec - np.mean(array_doc_vec, axis=0)) / np.std(array_doc_vec, axis=0)
+# alternative normalisation (standardising)
+# normed_array_doc_vec = (array_doc_vec - np.mean(array_doc_vec, axis=0)) / np.std(array_doc_vec, axis=0)
 
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
@@ -114,22 +114,28 @@ winner_coordinates = np.array([som.winner(x) for x in normed_array_doc_vec]).T
 # with np.ravel_multi_index, we convert the bi-dimensional coordinates to a mono-dimensional index
 cluster_index = np.ravel_multi_index(multi_index=winner_coordinates, dims=(x, y))
 
-# plot each luster with a different colour
+# via applying SOMs,
+# have gone from mapping space X of dimensions
+len(normed_array_doc_vec)
+# to a mapping space Y of dimensions
+len(np.unique(cluster_index))
+
+# bring cluster indices back to original data to tie them with base_path
+df_output['base_path'] = 'www.gov.uk' + df_output['base_path']
+df_output['document_vectors_norm'] = normed_array_doc_vec.tolist()
+df_output['cluster_index'] = cluster_index
+
+
+# plot each cluster with a different colour
 # plotting clusters using the first 2-dimensions of the data
 for cluster in np.unique(cluster_index):
     plt.scatter(x=normed_array_doc_vec[cluster_index == cluster, 0],
                 y=normed_array_doc_vec[cluster_index == cluster, 1],
                 label='cluster = ' + str(cluster),
                 alpha=0.7)
-# plotting centroids
-for centroid in som.get_weights():
-    plt.scatter(x=centroid[:, 0],
-                y=centroid[:, 1],
-                marker='x',
-                s=80,
-                linewidths=3,
-                color='k',
-                label='centroid')
+# plotting centroids found here: https://github.com/JustGlowing/minisom/blob/master/examples/Clustering.ipynb
+# exclude because it's causing noisy plot
+
 plt.legend()
-plt.savefig(fname='reports/figures/som_cluster_scatter_use_l2.png')
+plt.savefig(fname='reports/figures/som_cluster_scatter.png')
 plt.close('all')
