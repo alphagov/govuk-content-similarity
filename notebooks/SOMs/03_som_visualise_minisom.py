@@ -8,8 +8,12 @@ import pandas as pd
 from sklearn.preprocessing import normalize
 
 import matplotlib.pyplot as plt
-from bokeh.palettes import viridis
-from bokeh.plotting import figure, output_file, show
+from matplotlib.patches import RegularPolygon
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from matplotlib import cm, colorbar
+
+# from bokeh.palettes import viridis
+# from bokeh.plotting import figure, output_file, show
 
 
 def is_prime(n):
@@ -110,16 +114,9 @@ del total_neurons, normal_cov, eigen_values, result
 
 # initialization and training of SOM
 som = MiniSom(x=x, y=y, input_len=len_vector,
-              activation_distance='cosine', topology='rectangular', neighborhood_function='gaussian',
+              activation_distance='cosine', topology='hexagonal', neighborhood_function='gaussian',
               sigma=0.8, learning_rate=0.8, random_seed=42)
 som.train_batch(data=normed_array_doc_vec, num_iteration=1000, verbose=True)
-
-# plot distance map, U-Matrix, using pseudocolour
-# where neurons of maps are displayed as an array of cells
-# and colour represents the weights/distance from neighbour neurons
-plt.figure(figsize=(9, 9))
-plt.pcolor(som.distance_map().T, cmap='bone_r')
-plt.colorbar()
 
 # will consider all the sample mapped into a specific neuron as a cluster.
 # to identify each cluster more easily, will translate the bi-dimensional indices
@@ -138,35 +135,43 @@ len(np.unique(cluster_index))
 # bring cluster indices back to original data to tie them with base_path
 df_output['cluster_index'] = cluster_index
 
-# plot each cluster with a different colour
-# plotting clusters using the first 2-dimensions of the data
-for cluster in np.unique(cluster_index)[10:12]:
-    plt.scatter(x=normed_array_doc_vec[cluster_index == cluster, 0],
-                y=normed_array_doc_vec[cluster_index == cluster, 1],
-                label='cluster = ' + str(cluster),
-                alpha=0.7)
-# plotting centroids found here: https://github.com/JustGlowing/minisom/blob/master/examples/Clustering.ipynb
-# exclude because it's causing noisy plot
+# plot hexagonal topology
+f = plt.figure(figsize=(10, 10))
+ax = f.add_subplot(111)
+ax.set_aspect('equal')
+xx, yy = som.get_euclidean_coordinates()
+umatrix = som.distance_map()
+weights = som.get_weights()
+for i in range(weights.shape[0]):
+    for j in range(weights.shape[1]):
+        wy = yy[(i, j)] * 2 / np.sqrt(3) * 3 / 4
+        hex = RegularPolygon(xy=(xx[(i, j)], wy),
+                             numVertices=6,
+                             radius=.95 / np.sqrt(3),
+                             facecolor=cm.Blues(umatrix[i, j]),
+                             alpha=.4,
+                             edgecolor='gray')
+        ax.add_patch(hex)
 
-plt.legend()
-plt.savefig(fname='reports/figures/som_cluster_scatter.png')
+for cnt, x in enumerate(normed_array_doc_vec):
+    w = som.winner(x)
+    wx, wy = som.convert_map_to_euclidean(xy=w)
+    wy = wy * 2 / np.sqrt(3) * 3 / 4
+    plt.plot(wx, wy, markerfacecolor='none', markeredgecolor='black', markersize=12, markeredgewidth=2)
+
+xrange = np.arange(weights.shape[0])
+yrange = np.arange(weights.shape[1])
+plt.xticks(xrange - .5, xrange)
+plt.yticks(yrange * 2 / np.sqrt(3) * 3 / 4, yrange)
+
+divider = make_axes_locatable(plt.gca())
+ax_cb = divider.new_horizontal(size="5%", pad=0.05)
+cbl = colorbar.ColorbarBase(ax=ax_cb, cmap=cm.Blues,
+                            orientation='vertical', alpha=.4)
+cbl.ax.get_yaxis().labelpad = 16
+cbl.ax.set_ylabel('distance from neurons in the neighbourhood', rotation=270, fontsize=16)
+plt.gcf().add_axes(ax_cb)
+
+plt.show()
+plt.savefig('reports/figures/minisom_hex.png')
 plt.close('all')
-
-
-# experiment with bokeh plotting
-TOOLS = "hover,crosshair,pan,wheel_zoom,zoom_in,zoom_out,box_zoom,undo,redo,reset,tap,save,"
-
-p = figure(tools=TOOLS)
-list_cluster_index = np.unique(cluster_index).tolist()
-palette_colours = viridis(n=len(list_cluster_index))
-dict_plot = {list_cluster_index[i]: palette_colours[i] for i in range(len(list_cluster_index))}
-dict_plot = {list_cluster_index[i]: palette_colours[i] for i in range(12)}
-
-for key, value in dict_plot.items():
-    p.scatter(x=normed_array_doc_vec[cluster_index == key, 0],
-              y=normed_array_doc_vec[cluster_index == key, 1],
-              fill_color=value)
-output_file("color_scatter.html", title="SOMs visualised on two-dimensions")
-show(p)
-
-del p
