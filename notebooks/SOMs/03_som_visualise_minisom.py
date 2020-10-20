@@ -128,7 +128,7 @@ df_output['cluster_index'] = cluster_index
 
 # plot each cluster with a different colour
 # plotting clusters using the first 2-dimensions of the data
-for cluster in np.unique(cluster_index):
+for cluster in np.unique(cluster_index)[:4]:
     plt.scatter(x=normed_array_doc_vec[cluster_index == cluster, 0],
                 y=normed_array_doc_vec[cluster_index == cluster, 1],
                 label='cluster = ' + str(cluster),
@@ -137,5 +137,5 @@ for cluster in np.unique(cluster_index):
 # exclude because it's causing noisy plot
 
 plt.legend()
-plt.savefig(fname='reports/figures/som_cluster_scatter.png')
+plt.savefig(fname='outputs/ms_d2v_l2_cluster_four.png')
 plt.close('all')

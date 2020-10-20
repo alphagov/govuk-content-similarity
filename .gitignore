@@ -735,3 +735,9 @@ data/processed/*
 
 # Ignore the `.secrets` file
 .secrets
+
+# Ignore Mac generated file visual
+*.DS_Store
+
+# Ignore virtual environment
+venv_cs/*
