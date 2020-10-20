@@ -1,57 +1,28 @@
-'''
-demo of the Universal Sentence Encoder (USE) on some gov docs
-to run this, you must first download:
-- preprocessed_content_store_210920.csv from Google Drive
-- USE models, which come in two flavours, if you do not have a graphics card, go for DAN
-https://www.tensorflow.org/hub/tutorials/semantic_similarity_with_tf_hub_universal_encoder
-https://tfhub.dev/google/universal-sentence-encoder-large/5
-
-'''
-import tensorflow_hub as hub
-import tensorflow as tf
+# aim: test sentence_transformers
 import numpy as np
 import pandas as pd
 from ast import literal_eval
 import os
+from sentence_transformers import SentenceTransformer
 
-# tests presence of GPUs, to run the Transformer, GPU is necessary
-# otherwise looking at a run time of order of days for scoring the whole corpus
-
-print("Num GPUs Available: ", len(tf.config.experimental.list_physical_devices('GPU')))
-
-# DAN model, lighter A stands for averaging
-# model = hub.load('/home/james/Downloads/universal-sentence-encoder_4')
-# Transformer model, more performant, runs on GPU, if available
-model = hub.load('/home/james/Downloads/universal-sentence-encoder-large_5')
-
-
-def embed(input):
-    return model(input)
-
+# load model: specified cpu as the data batches are small, can use cuda as device if cuda is available
+model = SentenceTransformer('distilbert-base-nli-stsb-mean-tokens',
+                            device='cpu')
 
 # import data from the content store
-content_store_df = pd.read_csv("/home/james/Downloads/preprocessed_content_store_210920.csv",
+content_store_file_path = os.path.join('data/raw/preprocessed_content_store_011020.csv')
+content_store_df = pd.read_csv(content_store_file_path,
                                compression='gzip', delimiter="\t", low_memory=False)
-# filter document types
-doc_types = ['press_release', 'news_story', 'speech', 'world_news_story', 'guidance']
+doc_types = [
+    # 'press_release', 'news_story', 'speech', 'world_news_story',
+    'guidance']
 doc_mask = content_store_df['document_type'].isin(doc_types)
-# filter dates
-date_mask = content_store_df['first_published_at'].str[:4].fillna('2000').astype(int) > 2000
-# filter live documents
+date_mask = content_store_df['first_published_at'].str[:4].fillna('2000').astype(int) > 2015
 live_mask = content_store_df['withdrawn'] == 'False'
 content_mask = live_mask & date_mask & doc_mask
 cols_keep = ['document_type', 'content_id', 'first_published_at', 'details']
 subset_content_df = content_store_df.loc[content_mask, cols_keep].copy()
 subset_content_df['details'] = subset_content_df['details'].map(literal_eval)
-
-
-def cos_sim(a, b):
-    """Takes 2 vectors a, b and returns the cosine similarity
-    """
-    dot_product = np.dot(a, b)
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    return dot_product / (norm_a * norm_b)
 
 
 def clean_xml(original_text):
@@ -90,17 +61,18 @@ def extract_paragraphs(original_text):
 
 def document_embedding(paragraphs):
     '''
-    average embeddings across sentences
+    returns the average of sentence embeddings for a document
+    note this a different design to the USE embeddings
     '''
-    embedding = embed(paragraphs)
-    average_embedding = tf.math.reduce_mean(embedding, axis=0).numpy()
+    embedding = model.encode(paragraphs)
+    average_embedding = embedding.mean(axis=0)
     return average_embedding
 
 
-# initialise an empty array for embeddings
-collected_doc_embeddings = np.zeros((subset_content_df.shape[0], 512))
+# declare empty array, note the embedding dimension of 768 for sbert
+collected_doc_embeddings = np.zeros((subset_content_df.shape[0], 768))
 
-# fill array with embeddings for all docs
+# create the document embeddings
 for i in range(subset_content_df.shape[0]):
     try:
         doc = subset_content_df.iloc[i]['details']['body']
@@ -114,14 +86,12 @@ for i in range(subset_content_df.shape[0]):
         progress = i / subset_content_df.shape[0]
         print('%s' % float('%.2g' % progress))
 
-# converts embeddings array into dataframe, with content id as unique key
+# convert the numpy array to dataframe for the embeddings
 embeddings_df = pd.DataFrame(collected_doc_embeddings)
 embeddings_df['content_id'] = subset_content_df['content_id'].to_list()
 
-# initialise list for storing raw text
+# declare empty list for doc text
 collected_doc_text = []
-
-# store the original raw text extracted from the documents
 for i in range(subset_content_df.shape[0]):
     try:
         doc = subset_content_df.iloc[i]['details']['body']
@@ -137,14 +107,13 @@ for i in range(subset_content_df.shape[0]):
         progress = i / subset_content_df.shape[0]
         print('%s' % float('%.2g' % progress))
 
-# converts the raw text into a dataframe
+# convert doc text to dataframe with content id as key
 text_df = pd.DataFrame({'content_id': subset_content_df['content_id'].to_list(),
-                        'doc_text': collected_doc_text,
-                        'document_type': subset_content_df['document_type'].to_list(),
-                        'first_published_at': subset_content_df['first_published_at'].to_list()})
+                        'doc_text': collected_doc_text})
 
 
-# output dataframes
-os.chdir('/home/james/Documents/gds_nlp/search_documents/data')
-text_df.to_csv('text_use_large_2000_df.csv', index=False, header=True, mode='w')
-embeddings_df.to_csv('embeddings_use_large_2000_df.csv', index=False, header=True, mode='w')
+# output data
+# distilbert-base-nli-stsb-mean-tokens
+os.chdir('data/processed')
+text_df.to_csv('text_distilbert_base_df.csv', index=False, header=True, mode='w')
+embeddings_df.to_csv('embeddings_distilbert_base_df.csv', index=False, header=True, mode='w')
