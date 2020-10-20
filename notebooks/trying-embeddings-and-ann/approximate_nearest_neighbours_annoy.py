@@ -14,7 +14,7 @@ import numpy as np
 import os
 from annoy import AnnoyIndex
 
-os.chdir('/home/james/Documents/gds_nlp/search_documents/data')
+os.chdir('data/processed')
 
 
 def get_cosine_from_similarity(similarity, dp=4):
@@ -47,10 +47,19 @@ settings = {'dilbert': {'embeddings': 'embeddings_distilbert_base_df.csv',
             'use_2000': {'embeddings': 'embeddings_use_large_2000_df.csv',
                          'text': 'text_use_large_2000_df.csv',
                          'embedding_dim': 512,
-                         'ann_index': 'use_2000.ann'}}
+                         'ann_index': 'use_2000.ann'},
+            'use_20201014': {'embeddings': 'embeddings_20201014_df.csv',
+                             'text': 'text_use_20201014_df.csv',
+                             'embedding_dim': 512,
+                             'ann_index': 'use_20201014.ann'},
+            'use_20201014_v2': {'embeddings': 'embeddings_20201014_df_v2.csv',
+                                'text': 'text_use_20201014_df_v2.csv',
+                                'embedding_dim': 512,
+                                'ann_index': 'use_20201014_v2.ann'}
+            }
 
 # select which embeddings you are going to analyse
-embedding_type = 'use_2000'
+embedding_type = 'use_20201014_v2'
 
 # pass in the settings above for importing the embeddings data and matching text
 embeddings_df = pd.read_csv(settings[embedding_type]['embeddings'])
@@ -114,7 +123,7 @@ list_interesting_indices = []
 n = 1000
 while n > 0:
     n -= 1
-    text_idx = np.random.randint(0, 30000)
+    text_idx = np.random.randint(0, 3000)
     cosine_angle = print_cosine_and_texts(text_idx, verbose=False)
     if cosine_angle > 0.9 and cosine_angle < 0.95:
         list_interesting_indices.append(text_idx)
