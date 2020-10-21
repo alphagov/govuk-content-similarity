@@ -1,5 +1,5 @@
 import pickle
-from math import sqrt
+from src.utils.helper_som import get_som_dimensions
 
 import numpy as np
 import pandas as pd
@@ -14,28 +14,13 @@ from matplotlib import cm, colorbar
 
 # import data, normed document vectors and som
 df_sample = pd.read_pickle(filepath_or_buffer='data/df_sample.pkl')
-normed_array_doc_vec = np.load(file='data/document_vectors_norm_sample.npy')
+normed_array_doc_vec = np.load(file='data/doc_vec_norm_sample.npy')
 with open('data/som.p', 'rb') as infile:
     som = pickle.load(infile)
 
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
-# compute number of neurons and how many make up each side
-# where this is approximately the ratio of two largest eigenvalues of training data's covariance matrix
-# https://python-data-science.readthedocs.io/en/latest/unsupervised.html
-# rule of thumb for setting grid is 5*sqrt(N) where N is sample size
-# example must be transpose of our case:
-# https://stats.stackexchange.com/questions/282288/som-grid-size-suggested-by-vesanto
-total_neurons = 5 * sqrt(normed_array_doc_vec.shape[0])
-# calculate eigenvalues
-normal_cov = np.cov(normed_array_doc_vec.T)
-eigen_values = np.linalg.eigvals(normal_cov)
-# get two largest eigenvalues
-result = sorted([i.real for i in eigen_values])[-2:]
-x = result[1] / result[0]
-y = total_neurons / x
-x = int(round(x, 0))
-y = int(round(y, 0))
+x, y = get_som_dimensions(arr=normed_array_doc_vec)
 
 # will consider all the sample mapped into a specific neuron as a cluster.
 # to identify each cluster more easily, will translate the bi-dimensional indices

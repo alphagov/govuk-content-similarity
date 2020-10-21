@@ -14,8 +14,8 @@ from PIL import Image
 from skimage import io
 
 
-df_output = pd.read_pickle(filepath_or_buffer='data/df_document_vectors.pkl')
-array_doc_vec = np.load(file='data/document_vectors.npy')
+df_output = pd.read_pickle(filepath_or_buffer='data/df.pkl')
+array_doc_vec = np.load(file='data/doc_vec.npy')
 
 labels = df_output['base_path'][:500].tolist()
 
@@ -78,17 +78,16 @@ top = 150
 right = 1135
 bottom = 620
 im = im.crop(box=(left, top, right, bottom))
-fig.add_layout_image(
-        dict(
-            source=im,
-            xref="x",
-            yref="y",
-            x=-0.5,
-            y=6.5,
-            sizex=14,
-            sizey=8,
-            opacity=0.5,
-            layer="below")
+fig.add_layout_image(dict(
+    source=im,
+    xref="x",
+    yref="y",
+    x=-0.5,
+    y=6.5,
+    sizex=14,
+    sizey=8,
+    opacity=0.5,
+    layer="below")
 )
 
 py.plot(figure_or_data=fig, filename='reports/figures/som_nodes_difference.html')

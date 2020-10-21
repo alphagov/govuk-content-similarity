@@ -25,12 +25,12 @@ print('Time to train: {} minutes'.format(round((time() - t) / 60, 2)))
 
 # save trained model
 model_dbow.save('data/model_dbow')
-#model_dbow = Doc2Vec.load('data/model_dbow')
+# model_dbow = Doc2Vec.load('data/model_dbow')
 
 # store and save document vectors in numpy array for minisom
 array_doc_vectors = model_dbow.docvecs.vectors_docs
-np.save(file='data/document_vectors.npy', arr=array_doc_vectors)
-#array_doc_vectors = np.load(file='data/document_vectors.npy')
+np.save(file='data/doc_vec.npy', arr=array_doc_vectors)
+# array_doc_vectors = np.load(file='data/doc_vec.npy')
 
 # associate base_path with document vectors
 list_doc_vectors = array_doc_vectors.tolist()
@@ -39,4 +39,4 @@ df_output = pd.DataFrame({'base_path': df['base_path'],
                           'document_vectors': series_doc_vectors})
 
 # save dataframe
-pd.to_pickle(obj=df_output, filepath_or_buffer='data/df_document_vectors.pkl')
+pd.to_pickle(obj=df_output, filepath_or_buffer='data/df.pkl')
