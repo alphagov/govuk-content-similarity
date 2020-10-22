@@ -1,4 +1,5 @@
 import pickle
+from src.utils.helper_som import get_minimal_distance_factors
 from src.utils.helper_som import get_som_dimensions
 
 import numpy as np
@@ -21,6 +22,7 @@ with open('data/som.p', 'rb') as infile:
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
 x, y = get_som_dimensions(arr=normed_array_doc_vec)
+x, y = get_minimal_distance_factors(n=5 * np.sqrt(normed_array_doc_vec.shape[0]))
 
 # will consider all the sample mapped into a specific neuron as a cluster.
 # to identify each cluster more easily, will translate the bi-dimensional indices
@@ -38,8 +40,12 @@ df_sample['cluster_index'] = cluster_index
 f = plt.figure(figsize=(10, 10))
 ax = f.add_subplot(111)
 ax.set_aspect('equal')
+# return position of neurons on a euclidean plane
+# that reflects chosen topology in meshgrids xx, yy e.g. (1,4) -> xx[1,4], yy[1,4]
 xx, yy = som.get_euclidean_coordinates()
+# returns distance map of the weights
 umatrix = som.distance_map()
+# returns weights of neural network
 weights = som.get_weights()
 for i in range(weights.shape[0]):
     for j in range(weights.shape[1]):
