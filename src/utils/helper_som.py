@@ -12,16 +12,19 @@ def is_prime(n):
     :param n: Number to check if prime
     :return: Boolean to state whether n is prime or not
     """
-    if n == 2:
-        return True
-    if n % 2 == 0 or n <= 1:
-        return False
-
-    root = int(sqrt(n)) + 1
-    for divisor in range(3, root, 2):
-        if n % divisor == 0:
+    try:
+        if n == 2:
+            return True
+        if n % 2 == 0 or n <= 1:
             return False
-    return True
+
+        root = int(sqrt(n)) + 1
+        for divisor in range(3, root, 2):
+            if n % divisor == 0:
+                return False
+        return True
+    except TypeError:
+        print(f"Input '{n}' is not a integer nor float, please enter one!")
 
 
 def get_minimal_distance_factors(n):
@@ -36,7 +39,6 @@ def get_minimal_distance_factors(n):
     :return: The factors of n whose distance from each other is minimised.
     """
     try:
-        n = int(n)
         if isinstance(n, float) or is_prime(n):
             # gets next largest even number
             n = ceil(n / 2) * 2
@@ -47,7 +49,7 @@ def get_minimal_distance_factors(n):
                 root -= 1
             return int(root), int(n / root)
     except TypeError:
-        print("Input '{}' is not a integer nor float, please enter one!".format(n))
+        print(f"Input '{n}' is not a integer nor float, please enter one!")
 
 
 def get_som_dimensions(arr):
@@ -59,6 +61,8 @@ def get_som_dimensions(arr):
     Example must be transpose of our case:
     https://stats.stackexchange.com/questions/282288/som-grid-size-suggested-by-vesanto
 
+    Note: This relies on division. In case where the divisor is 0, falls back to get_minimal_distance_factors().
+
     :param arr: numpy array of normalised vectors to go into SOMs.
     :return: The (x, y) dimensions to input into SOM.
     """
@@ -69,10 +73,15 @@ def get_som_dimensions(arr):
         eigen_values = np.linalg.eigvals(normal_cov)
         # get two largest eigenvalues
         result = sorted([i.real for i in eigen_values])[-2:]
-        x = result[1] / result[0]
-        y = total_neurons / x
+        # how do we deal with case when result[0] == 0?
+        if result[0] == 0:
+            print("Cannot divide by 0, computing minimal distance factors instead")
+            return get_minimal_distance_factors(total_neurons)
+        else:
+            x = result[1] / result[0]
+            y = total_neurons / x
 
-        # round to nearest integer and convert to integer datatype
-        return int(round(x, 0)), int(round(y, 0))
+            # round to nearest integer and convert to integer datatype
+            return int(round(x, 0)), int(round(y, 0))
     except TypeError:
         print("Input '{}' is not a numpy array, please enter one!".format(arr))
