@@ -1,7 +1,6 @@
 from minisom import MiniSom
 
 from src.utils.helper_som import get_minimal_distance_factors
-# from src.utils.helper_som import get_som_dimensions
 import pickle
 
 import numpy as np
@@ -14,6 +13,9 @@ from sklearn.preprocessing import normalize
 df_output = pd.read_pickle(filepath_or_buffer='data/df.pkl')
 array_doc_vec = np.load(file='data/doc_vec.npy')
 
+# load text
+df = pd.read_csv(filepath_or_buffer='data/df.csv')
+
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
 # https://stats.stackexchange.com/a/218729/276516
@@ -21,16 +23,20 @@ array_doc_vec = np.load(file='data/doc_vec.npy')
 normed_array_doc_vec = normalize(X=array_doc_vec, axis=0, norm='l2')
 
 # bring data together
-df_output['base_path'] = 'www.gov.uk' + df_output['base_path']
 df_output['document_vectors_norm'] = normed_array_doc_vec.tolist()
 
 # focus on specific subset of data, these are:
-# - Brexit/Transition
 # - Coronavirus
-# For now, just random sample
-df_output = df_output.sample(n=50000, random_state=42)
+# then append random sample to include variety of topics
+df_covid = df[df['text_clean'].str.contains(pat=r'corona|covid',
+                                            case=False,
+                                            regex=True)]
+df = df.sample(n=50000 - len(df_covid), random_state=42)
+df = pd.concat(objs=[df, df_covid], axis=0, ignore_index=True)
+df_output = df_output.merge(right=df[['base_path', 'text_clean']], how='inner', on='base_path')
 normed_array_doc_vec = df_output['document_vectors_norm'].tolist()
 normed_array_doc_vec = np.array(normed_array_doc_vec)
+df_output['base_path'] = 'www.gov.uk' + df_output['base_path']
 
 # compute parameters
 len_vector = normed_array_doc_vec.shape[1]
