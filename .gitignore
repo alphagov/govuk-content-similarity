@@ -738,3 +738,4 @@ data/processed/*
 
 #ignore .vscode dir
 .vscode
+.DS_Store
