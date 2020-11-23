@@ -21,7 +21,7 @@ model_dbow = Doc2Vec(dm=0, vector_size=300, negative=5, hs=0, min_count=2, sampl
 model_dbow.build_vocab([x for x in tqdm(documents)])
 t = time()
 model_dbow.train(documents, total_examples=model_dbow.corpus_count, epochs=1)
-print('Time to train: {} minutes'.format(round((time() - t) / 60, 2)))
+print(f'Time to train: {round((time() - t) / 60, 2)} minutes')
 
 # save trained model
 model_dbow.save('data/model_dbow')

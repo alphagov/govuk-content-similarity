@@ -2,7 +2,6 @@ from src.utils.constants import CONTENT_STORE_HEADER, CONTENT_STORE_DATE
 
 from time import time
 import os
-import re
 import multiprocessing
 
 import pandas as pd
@@ -43,7 +42,8 @@ df = pd.read_csv(filepath_or_buffer=DATA_DIR + "/" + FILE_NAME,
 df = df.dropna(subset=['text'], axis=0)
 
 # remove non-alphabetic characters
-df['text_clean'] = [re.sub("[^A-Za-z']+", ' ', str(row)).lower() for row in df['text']]
+df['text_clean'] = df['text'].str.lower()
+df['text_clean'] = df['text_clean'].str.replace(pat=r"[^A-Za-z']+", repl=' ')
 
 # disable ner for speed
 nlp = spacy.load('en', disable=['ner', 'parser'])
