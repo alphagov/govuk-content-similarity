@@ -50,7 +50,7 @@ Drawbacks of SOMs are:
 
 ## Data load and preprocessing
 
-#### `notebooks/SOMs/01_load_clean_.py`
+#### `notebooks/soms/01_load_clean_.py`
 We download the pre-processed content store of all the pages on GOV.UK from AWS on store it in our data directory.
 
 > Is approximately over 530,000 GOV.UK pages.
@@ -61,7 +61,7 @@ To remove possible noise further from our text data, we also lemmatise the text 
 
 ## Document vector creation
 
-#### `notebooks/SOMs/02_embedding.py`
+#### `notebooks/soms/02_embedding.py`
 We use [doc2vec](https://radimrehurek.com/gensim/models/doc2vec.html) to create the document vectors. The decision to use this technique was to quickly get some vectors representing documents set-up so that we can test out SOMs.
 
 There are probably better alternative ways to generate these vectors, especially given there are literature concerns over doc2vec. A few are provided below:
@@ -69,7 +69,7 @@ There are probably better alternative ways to generate these vectors, especially
 
 ## Applying SOMs
 
-#### `notebooks/SOMs/03_som_visualise_minisom.py`
+#### `notebooks/soms/03_som_visualise_minisom.py`
 
 We use the [minisom](https://github.com/JustGlowing/minisom) implementation of SOMs for its ease-of-use, continual maintenance and comprehensive examples.
 
@@ -82,9 +82,9 @@ After training the SOM, have mapped these ~500,000 samples into (1*839=)839 node
 
 We then compute the coordinates of the winning neuron, BMU, from the set of 1 x 839 nodes, and convert these coordinates into an index which act as our clusters. This gives us a `cluster_index` for each document vector which we can then column-bind to our each `base_path` or `text` so we know what cluster each GOV.UK page belongs to.
 
-[stackoverflow, ASantosRibeiro 2014](https://stackoverflow.com/a/26926949/13416265)
+[[*stackoverflow, ASantosRibeiro 2014*](https://stackoverflow.com/a/26926949/13416265)]
 
-[superdatascience, 2018](https://www.superdatascience.com/blogs/the-ultimate-guide-to-self-organizing-maps-soms)
+[[*superdatascience, 2018*](https://www.superdatascience.com/blogs/the-ultimate-guide-to-self-organizing-maps-soms)]
 
 ***
 
@@ -92,6 +92,18 @@ Thinking now is that we have identified 100 clusters from our 294 node mapping o
 - Want to then visualise these 100 clusters and possibly have a drill-through (stretch goal) or extract list of each document vector relating to each category.
 
 ## Plotting
+
+#### `notebooks/soms/04_bokeh.ipynb`
+#### `notebooks/soms/04_matplotlib.ipynb`
+
 Due to SOMs being a dimensionality-reduction technique, they can be used to create clusters for identifying semantically-similar content. This can then be visualised by a U-Matrix of the SOM, which illustrates the Euclidean distance between weight vectors of neighbouring cells.
 
 In terms of interpreting a U-Matrix, a good explanation is provided [here](https://stackoverflow.com/a/13642262/13416265). In particular, the colours on the U-Matrix represents how close the neurons in the Y map are, with lighter colours representing smaller distances between neurons and darker colours representing larger distances between neurons. In this way, the light shades of a U-Matrix signify clusters of similar neurons whereas darker shades are cluster boundaries. These are clusters of the SOM nodes.
+
+In the context of the plot we created in these notebooks, black dots represent sets of contents within each hexagon.
+
+The content in the purple hexagons that's displayed when hovering over a interactive plot in `04_bokeh.ipynb` are identified as being semantically similar to the content within other purple hexagons in its neighbourhood.
+
+The content in the yellow hexagons are identified as being semantically dis-similar to content within other yellow and purple hexagons in its neighbourhood.
+
+Therefore, the content in the purple hexagons represent semantically-similar GOV.UK content pages. These can be used in a product with a UI that allows the user to filter for subsets of pages and then seeing the hexagons. They can then explore further by clicking-through on the page link, `base_path`. In this way, content designers can use their expertise to understand if the pages being identified as semantically-similar have overlapping intents and thereby they can make a decision on whether to start the process for requesting one of these pages to be taken offline, so as to not confuse users.

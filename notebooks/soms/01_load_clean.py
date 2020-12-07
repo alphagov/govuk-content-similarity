@@ -1,4 +1,5 @@
 from src.utils.constants import CONTENT_STORE_HEADER, CONTENT_STORE_DATE
+from src.utils.preprocess import clean_text
 
 from time import time
 import os
@@ -8,23 +9,7 @@ import pandas as pd
 import spacy
 
 
-def clean_text(doc):
-    """
-    Lemmatises and remove stopwords.
-    Note: Have not moved to a separate functions script as this function depends on creation of spacy Doc object \n
-          haven't quite figured out a way to isolate that appropriately if moved to a separate script.
-
-    :param doc: spacy Doc object to lemmatise and remove stop words from
-    :return: spacy Doc object that has been lemmatised and have had stop words removed
-    """
-
-    txt = [token.lemma_ for token in doc if not token.is_stop]
-    # remove one or two word sentences as are not beneficial to Word2Vec
-    if len(txt) > 2:
-        return ' '.join(txt)
-
-
-DATA_DIR = os.getenv("DATA_DIR")
+DATA_DIR = os.getenv("data/raw")
 FILE_NAME = "preprocessed_content_store_180920.csv.gz"
 n_cores = multiprocessing.cpu_count() - 1
 
@@ -56,4 +41,4 @@ print(f'Time to clean up everything: {round((time() - t) / 60, 2)} minutes')
 df = df.dropna(axis=0, subset=['text_clean']).drop_duplicates()
 
 # export so can do document embeddings and SOMs in later script
-df[['base_path', 'text', 'text_clean']].to_csv(path_or_buf='data/df.csv', index=False)
+df[['base_path', 'text', 'text_clean']].to_csv(path_or_buf='data/interim/df.csv', index=False)

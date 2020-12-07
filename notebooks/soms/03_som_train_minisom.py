@@ -10,11 +10,11 @@ from sklearn.preprocessing import normalize
 
 
 # load doc2vec embedding vectors
-df_output = pd.read_pickle(filepath_or_buffer='data/df.pkl')
-array_doc_vec = np.load(file='data/doc_vec.npy')
+df_output = pd.read_pickle(filepath_or_buffer='data/interim/df.pkl')
+array_doc_vec = np.load(file='data/interim/doc_vec.npy')
 
 # load text
-df = pd.read_csv(filepath_or_buffer='data/df.csv')
+df = pd.read_csv(filepath_or_buffer='data/interim/df.csv')
 
 # normalise array using l2 normalisation
 # so sum of squares is 1 for each vector
@@ -46,15 +46,15 @@ total_neurons = 5 * np.sqrt(normed_array_doc_vec.shape[0])
 x, y = get_minimal_distance_factors(total_neurons)
 
 
-# initialization and training of SOM
+# initialisation and training of SOM
 som = MiniSom(x=x, y=y, input_len=len_vector,
               activation_distance='cosine', topology='hexagonal', neighborhood_function='gaussian',
               sigma=0.8, learning_rate=0.8, random_seed=42)
 som.train_batch(data=normed_array_doc_vec, num_iteration=1000, verbose=True)
 
 # save the SOM
-with open('data/som.p', 'wb') as outfile:
+with open('data/processed/som.p', 'wb') as outfile:
     pickle.dump(som, outfile)
 
-pd.to_pickle(obj=df_output, filepath_or_buffer='data/df_sample.pkl')
-np.save(file='data/doc_vec_norm_sample.npy', arr=normed_array_doc_vec)
+pd.to_pickle(obj=df_output, filepath_or_buffer='data/processed/df_sample.pkl')
+np.save(file='data/processed/doc_vec_norm_sample.npy', arr=normed_array_doc_vec)

@@ -10,7 +10,7 @@ from gensim.models.doc2vec import TaggedDocument
 
 n_cores = multiprocessing.cpu_count() - 1
 
-df = pd.read_csv(filepath_or_buffer='data/df.csv')
+df = pd.read_csv(filepath_or_buffer='data/interim/df.csv')
 
 # create TaggedDocument for doc2vec DBOW
 # will use indices of sentences as tags
@@ -24,12 +24,12 @@ model_dbow.train(documents, total_examples=model_dbow.corpus_count, epochs=1)
 print(f'Time to train: {round((time() - t) / 60, 2)} minutes')
 
 # save trained model
-model_dbow.save('data/model_dbow')
-# model_dbow = Doc2Vec.load('data/model_dbow')
+model_dbow.save('data/interim/model_dbow')
+# model_dbow = Doc2Vec.load('data/interim/model_dbow')
 
 # store and save document vectors in numpy array for minisom
 array_doc_vectors = model_dbow.docvecs.vectors_docs
-np.save(file='data/doc_vec.npy', arr=array_doc_vectors)
+np.save(file='data/interim/doc_vec.npy', arr=array_doc_vectors)
 # array_doc_vectors = np.load(file='data/doc_vec.npy')
 
 # associate base_path with document vectors
@@ -39,4 +39,4 @@ df_output = pd.DataFrame({'base_path': df['base_path'],
                           'document_vectors': series_doc_vectors})
 
 # save dataframe
-pd.to_pickle(obj=df_output, filepath_or_buffer='data/df.pkl')
+pd.to_pickle(obj=df_output, filepath_or_buffer='data/interim/df.pkl')
