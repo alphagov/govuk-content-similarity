@@ -14,26 +14,11 @@ import numpy as np
 import os
 from annoy import AnnoyIndex
 
+import src.utils.embedding_utils as utils
+
 os.chdir('data/processed')
 
-
-def get_cosine_from_similarity(similarity, dp=4):
-    '''
-    converts the similarity distance metric into a cosine angle
-    '''
-    cosine_angle = 1 - (similarity**2) / 2
-    return cosine_angle
-
-
-def cos_sim(a, b):
-    """
-    Takes 2 vectors a, b and returns the cosine similarity
-    """
-    dot_product = np.dot(a, b)
-    norm_a = np.linalg.norm(a)
-    norm_b = np.linalg.norm(b)
-    return dot_product / (norm_a * norm_b)
-
+# BUILDING THE INDEX FOR APPROXIMATE NEAREST NEIGHBOURS
 
 # json of settings for the testing
 settings = {'dilbert': {'embeddings': 'embeddings_distilbert_base_df.csv',
@@ -83,18 +68,21 @@ for i in range(embeddings_df.shape[0]):
 t.build(10)
 t.save(settings[embedding_type]['ann_index'])
 
+# TESTING AN ANNOY INDEX
+
 # load a previously trained Annoy Index (the one you saved two lines up)
 u = AnnoyIndex(f, 'angular')
 u.load(settings[embedding_type]['ann_index'])
 # u.unload()
 
 
+# in future might want to put this in a separate module, or look at get_similar_docs from embedding_utils
 def print_cosine_and_texts(text_idx, max_length_string=1000, verbose=True):
     '''
     function for printing out details of query document and the best match
     '''
     results = np.array(u.get_nns_by_item(text_idx, 2, include_distances=True))
-    cosine_angle = get_cosine_from_similarity(results[1, 1])
+    cosine_angle = utils.get_cosine_from_similarity(results[1, 1])
     if verbose:
         print('cosine angle: ' + '%s' % float('%.2g' % cosine_angle))
         print("----")
@@ -157,7 +145,7 @@ subset_text_df.shape
 collected_guidance_ids = []
 for i in subset_text_df.index.to_list():
     results = np.array(u.get_nns_by_item(i, 2, include_distances=True))
-    cosine_angle = get_cosine_from_similarity(results[1, 1])
+    cosine_angle = utils.get_cosine_from_similarity(results[1, 1])
     if cosine_angle > 0.8:
         collected_guidance_ids.append(i)
 
@@ -188,6 +176,6 @@ test_text = ['Britain will roll out COVID-19 vaccinations when they are ready ba
 embedding = document_embedding(test_text)
 results = np.array(u.get_nns_by_vector(embedding, 4, include_distances=True))
 
-get_cosine_from_similarity(results[1,0])
+utils.get_cosine_from_similarity(results[1,0])
 text_df['doc_text'][results[0,0]]
 '''
