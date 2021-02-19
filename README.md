@@ -2,7 +2,28 @@
 
 ## Overview
 
-Project using embeddings to find similar GOV.UK content to a piece of text or content item.
+Experimental work to identify semantically-similar content across all GOV.UK web pages.
+
+## Context
+
+Consider the case of a user searching on GOV.UK for information on paying the Dartford Crossing charge. They would
+expect to only have one page on this on GOV.UK. However, if they find multiple pages on paying the Dartford Crossing
+charge then this can be confusing to the user as they would not know immediately which one is appropriate.
+
+- [Pay the Darford Crossing chart (Dart Charge)](https://www.gov.uk/pay-dartford-crossing-charge)
+- [How to pay the Dart Charge](https://www.gov.uk/government/publications/dart-charge-leaflet)
+
+In principle, GOV.UK may not want multiple pages on the Dartford Crossing charge for this reason and would prefer to
+remove one of these pages. However, due to resource constraint, then it is difficult to identify these similar pages.
+
+By leveraging the below two methods, we can identify semantically-similar pages at scale so that this problem can be
+proactively managed.
+
+1. Universal Sentence Encoder + Approximate Nearest Neighbour (Oh Yeah)
+1. doc2vec + Self-Organising Maps (SOMs)
+
+The key principles are to represent each GOV.UK page as a document embedding then use distance metrics to quantify
+how semantically-similar two pages are.
 
 ## Requirements
 
@@ -25,6 +46,14 @@ To allow/trust the [`.envrc`](.envrc) run the `allow` command using `direnv` at 
 ```shell script
 direnv allow
 ```
+
+> **Note:** If you're using PyCharm, then you will need to apply a few more steps before running `direnv allow` in your shell:
+> - In your shell, run `pip install python-dotenv`.
+> - On PyCharm, click `PyCharm` -> `Preferences` -> `Plugins` and download the `EnvFile` plugin.
+> - On PyCharm, edit your configuration to `Enable EnvFile` by ticking the checkbox.
+> - On PyCharm, click `PyCharm` -> `Preferences` -> `Build, Execution, Deployment` -> `Console` -> `Python Console` and in the `Starting script` section, add the following Python code:
+>    + `from dotenv import load_dotenv`
+>    + `load_dotenv()`
 
 ### Installing Python packages
 
