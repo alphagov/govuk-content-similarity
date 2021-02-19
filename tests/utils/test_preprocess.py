@@ -3,7 +3,7 @@ import spacy
 
 
 # disable ner for speed
-nlp = spacy.load('en', disable=['ner', 'parser'])
+nlp = spacy.load('en_core_web_sm', disable=['ner', 'parser'])
 
 
 def test_clean_text(text):
