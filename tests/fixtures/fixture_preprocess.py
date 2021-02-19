@@ -11,4 +11,4 @@ def text():
                               'text_clean': ["accord know law aviation , way bee able fly .",
                                              "wing small fat little body ground .",
                                              "bee , course , fly bee care human think impossible .",
-                                             "yellow , black . yellow , black ."]})
+                                             "Yellow , black . Yellow , black ."]})
